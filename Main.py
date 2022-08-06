@@ -10,6 +10,14 @@ Created on Sat Jul 23 18:52:10 2022
 import matplotlib.pyplot as plt
 import numpy as np
 plt.style.use("ggplot")
+latex_mode = False
+
+if (latex_mode):
+    matplotlib.rcParams.update({
+        'font.family': 'serif',
+        'text.usetex': True,
+        'text.latex.preamble': r'\usepackage{amsfonts}'
+         })
 
 #%% Import Internal Modules
 
