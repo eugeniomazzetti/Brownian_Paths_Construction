@@ -65,12 +65,12 @@ def std_bm_engine_matrix(n_paths, n_steps, T, X0):
     
     The variance-covariance matrix and its Cholesky look like:
         
-    variance-covariance                Cholesky
-      ---------------      ------------------------------------    
-      | t1  t1   t1 |      |sqrt(t1)      0            0      |
-      | t1  t2   t2 |      |sqrt(t1) sqrt(t2-t1)       0      | 
-      | t1  t2   t3 |      |sqrt(t1) sqrt(t2-t1)  sqrt(t3-t2) |
-      ---------------      ------------------------------------
+    variance-covariance                Cholesky                   N(0,1)
+      ---------------      ------------------------------------   ------   
+      | t1  t1   t1 |      |sqrt(t1)      0            0      |   | Z1 |
+      | t1  t2   t2 | -->  |sqrt(t1) sqrt(t2-t1)       0      | X | Z2 | 
+      | t1  t2   t3 |      |sqrt(t1) sqrt(t2-t1)  sqrt(t3-t2) |   | Z3 |
+      ---------------      ------------------------------------   ------
       
     Therefore Brownian path can be constructed multiplying Cholesky times a vector
     Z of standard normal r.v.
