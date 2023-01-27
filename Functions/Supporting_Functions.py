@@ -9,7 +9,7 @@ Created on Sat Jul 23 18:52:53 2022
 
 import numpy as np
 
-#%% Brownian Motion Simulation: For Loop
+#%% Brownian Motion Simulation: Incremental
 
 def std_bm_engine_loop(n_paths, n_steps, T, X0):
     """
