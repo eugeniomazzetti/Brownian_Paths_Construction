@@ -62,7 +62,8 @@ def std_bm_engine_matrix(n_paths, n_steps, T, X0):
     Note in fact that the AUTO-covaraince matrix of a Brownian path is the  
     AUTO-covariance matrix of the Brownian motions vector. e.g. 
     [W(t1), W(t2), W(t3)].
-    
+
+    Given that Cov(W(t),W(s)) = E[W(t)W(s)] = min(t,s)
     The AUTO-covariance matrix and its Cholesky look like:
         
      AUTO-covariance                Cholesky                     N(0,1)
