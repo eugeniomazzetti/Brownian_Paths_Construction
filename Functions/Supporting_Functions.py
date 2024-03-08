@@ -59,13 +59,13 @@ def std_bm_engine_matrix(n_paths, n_steps, T, X0):
     """
     This function simulates brownian paths using matrix algebra. 
     
-    Note in fact that the variance-covaraince matrix of a Brownian path can be 
-    seen as the varince-covariance matrix of a vector of Brownian motions. e.g. 
+    Note in fact that the AUTO-covaraince matrix of a Brownian path is the  
+    AUTO-covariance matrix of the Brownian motions vector. e.g. 
     [W(t1), W(t2), W(t3)].
     
-    The variance-covariance matrix and its Cholesky look like:
+    The AUTO-covariance matrix and its Cholesky look like:
         
-    variance-covariance                Cholesky                   N(0,1)
+     AUTO-covariance                Cholesky                     N(0,1)
       ---------------      ------------------------------------   ------   
       | t1  t1   t1 |      |sqrt(t1)      0            0      |   | Z1 |
       | t1  t2   t2 | -->  |sqrt(t1) sqrt(t2-t1)       0      | X | Z2 | 
