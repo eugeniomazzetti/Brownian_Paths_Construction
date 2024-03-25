@@ -130,7 +130,7 @@ def stdBm_bridge(powerTwoPaths:int, nSteps:int, T:int, x0:float=0.0, quasiMC:boo
               a Brownian bridge with endpoints [W(l=0), W(r = T)].
         (iii) repeat m times populating each time the 2^k segments k = 1,2,...,m 
     
-    The function supports the use of Sobolo low-discrepancy numbers. Notes that
+    The function supports the use of Sobol low-discrepancy numbers. Notes that
     in this setting (quasiMC = True):
         
         nSteps = Sobol dimension
