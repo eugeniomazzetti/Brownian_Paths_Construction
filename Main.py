@@ -5,60 +5,76 @@ Created on Sat Jul 23 18:52:10 2022
 @author: Eugenio
 """
 
-#%% Import Standard Modules
+#%% Standard Modules
 
+import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
 plt.style.use("ggplot")
-latex_mode = False
 
-if (latex_mode):
-    matplotlib.rcParams.update({
-        'font.family': 'serif',
-        'text.usetex': True,
-        'text.latex.preamble': r'\usepackage{amsfonts}'
-         })
+#%% Internal Modules
 
-#%% Import Internal Modules
+from Functions.supporting_functions import stdBm_loop, stdBm_matrix, stdBm_bridge, convergenceTestBm
 
-from Functions.Supporting_Functions import std_bm_engine_loop, std_bm_engine_matrix, std_bm_engine_bridge
+#%% Process
 
-#%% Simulate STD Brownian: For Loop Vs. Matrix Vs. Bridge
+def run(latex_mode, quasiMC, nPathsPower, nSteps, horizon, x0, methods):
+    
+    if (latex_mode):
+        matplotlib.rcParams.update({
+            'font.family': 'serif',
+            'text.usetex': True,
+            'text.latex.preamble': r'\usepackage{amsfonts}'
+             })
+        
+    dfExp, dfVar = convergenceTestBm(quasiMC, nPathsPower, nSteps, horizon, x0, methods)
+           
+    return dfExp, dfVar
+    
 
-# Params ----------------------------------------------------------------------
+#%% Simulate Standard Brownian
 
-n_paths = 2
-n_steps = 2**10
-T       = 2
-X0      = 0
-
-# Sim ------------------------------------------------------------------------- 
-
-sim_loop   = std_bm_engine_loop(n_paths, n_steps, T, X0)
-sim_mat    = std_bm_engine_matrix(n_paths, n_steps, T, X0) 
-sim_bridge = std_bm_engine_bridge(n_paths, n_steps, T, X0) 
-
-print("Mean for loop:",np.mean(sim_loop["W"][:,-1]))
-print("Variance for loop:", np.var(sim_loop["W"][:,-1]))
-
-print("Mean Matrix:", np.mean(sim_mat["W"][-1,:]))
-print("Variance Matrix:", np.var(sim_mat["W"][-1,:]))
-
-print("Mean Bridge:", np.mean(sim_bridge["W"][-1,:]))
-print("Variance Bridge:", np.var(sim_bridge["W"][-1,:]))
-
-
-#%% Visualize
-
-plt.figure(0)
-plt.plot(sim_loop["time"], sim_loop["W"].T, label = "loop" )
-plt.title("Loop")
-
-plt.figure(1)
-plt.plot(sim_mat["time"], sim_mat["W"], label = "matrix")
-plt.title("Matrix")
-
-plt.figure(2)
-plt.plot(sim_bridge["time"], sim_bridge["W"], label = "bridge")
-plt.title("Bridge")
-
+if __name__ == "__main__":
+    
+    # Params ------------------------------------------------------------------    
+    quasiMC     = True
+    latex_mode  = True
+    methods     = ["loop", "matrix", "bridge"]    
+    nPathsPower = [2, 3, 4, 5, 6, 7, 8, 9, 10] #nPaths = 2**nPathsPower    
+    nSteps      = 2**10 #should be power two for Bridge and Sobol 
+    horizon     = 1.0
+    x0          = 0.0
+    nPaths      = 3
+    
+    # Convergence -------------------------------------------------------------
+    dfExp, dfVar = run(latex_mode, quasiMC, nPathsPower, nSteps, horizon, x0, methods)
+    
+    # Visualize Convergence ---------------------------------------------------
+    plt.figure(1)
+    plt.plot(2**dfExp.index, dfExp, label = "Expectation", marker = "o")
+    plt.title("Expectation")
+    plt.legend(methods)
+    plt.xlabel(xlabel="N paths")    
+    
+    plt.figure(2)
+    plt.plot(2**dfVar.index, dfVar, label = "Variance", marker = "o")
+    plt.title("Variance")
+    plt.legend(methods)
+    plt.xlabel(xlabel="N paths")
+    
+    # Sim ---------------------------------------------------------------------
+    sim_loop   = stdBm_loop(nPaths, nSteps, horizon, x0)    
+    sim_mat    = stdBm_matrix(nPaths, nSteps, horizon, x0) 
+    sim_bridge = stdBm_bridge(nPaths, nSteps, horizon, x0, quasiMC=True) 
+        
+    # Visualize Sim -----------------------------------------------------------    
+    plt.figure(3)
+    plt.plot(sim_loop["time"], sim_loop["W"].T, label = "loop" )
+    plt.title(f"Loop: N paths {2**nPaths}")
+    
+    plt.figure(4)
+    plt.plot(sim_mat["time"], sim_mat["W"], label = "matrix")
+    plt.title(f"Matrix: N paths {2**nPaths}")
+    
+    plt.figure(5)
+    plt.plot(sim_bridge["time"], sim_bridge["W"].T, label = "bridge")
+    plt.title(f"Bridge: N paths {2**nPaths}")
