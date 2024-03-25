@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # Params ------------------------------------------------------------------    
     quasiMC     = True
     latex_mode  = True
-    methods     = ["loop", "matrix", "bridge"]    
+    methods     = ["loop", "matrix", "bridge_sobol"]    
     nPathsPower = [2, 3, 4, 5, 6, 7, 8, 9, 10] #nPaths = 2**nPathsPower    
     nSteps      = 2**10 #should be power two for Bridge and Sobol 
     horizon     = 1.0
