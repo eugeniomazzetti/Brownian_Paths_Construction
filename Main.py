@@ -13,7 +13,7 @@ plt.style.use("ggplot")
 
 #%% Internal Modules
 
-from Functions.supporting_functions import stdBm_loop, stdBm_matrix, stdBm_bridge, convergenceTestBm
+from Functions.Supporting_Functions import stdBm_loop, stdBm_matrix, stdBm_bridge, convergenceTestBm
 
 #%% Process
 
