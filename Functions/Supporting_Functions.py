@@ -8,63 +8,66 @@ Created on Sat Jul 23 18:52:53 2022
 #%% Standard Modules
 
 import numpy as np
+import scipy.stats.qmc as qmc
+import scipy.stats as sts
+import pandas as pd
 
-#%% Brownian Motion Simulation: Incremental
+#%% Brownian Motion Sim: Incremental
 
-def std_bm_engine_loop(n_paths, n_steps, T, X0):
+def stdBm_loop(powerTwoPaths:int, nSteps:int, T:int, x0:float=0.0) -> dict:
     """
     Parameters
     ----------
-    n_paths : int
-        Number of paths.
-    n_steps : int
+    powerTwoPaths : int
+        Number of paths is equal to 2^powerTwoPaths.
+    nSteps : int
         Number of steps.
     T : int
         Final simulation time.
-    X0 : float
-        Initial value.
+    x0 : float
+        Initial value. For a standard Bm it should be zero. Default is 0.0.
 
     Returns
     -------
-    output : dictionary
+    output : dict
         Contains (i)  time: vector of time points
                  (ii) W   : Brownian simulation paths
 
     """
     
     #Initialize    
-    Z    = np.random.normal(0.0, 1.0, [n_paths, n_steps])
-    W    = np.zeros([n_paths, n_steps +1])
-    time = np.zeros([n_steps + 1])
-    
-    W[:,0] = X0
-    dt     = T/int(n_steps)
+    Z      = np.random.normal(0.0, 1.0, [2**powerTwoPaths, nSteps])
+    W      = np.zeros([2**powerTwoPaths, nSteps + 1])
+    time   = np.zeros([nSteps + 1])    
+    W[:,0] = x0
+    dt     = T/nSteps
     
     #Loop
-    for i in range(0, n_steps):
-        if n_paths > 1:
-            Z[:,i] = (Z[:,i] -np.mean(Z[:,i]))/np.std(Z[:,i])
+    for i in range(0, nSteps):
+        # NOTE: Centering improves drastically convergence of this method.
+        # if 2**powerTwoPaths > 2:
+        #     Z[:,i] = (Z[:,i] -np.mean(Z[:,i]))/np.std(Z[:,i])
         
         W[:,i+1]  = W[:,i] + Z[:,i]*np.sqrt(dt)
         time[i+1] = time[i] + dt
         
     #Output    
-    output = {"time": time, "W": W}
+    output = {"time":time, "W":W}
     
     return output
         
-#%% Brownian Motion Simulation: Matrix
+#%% Brownian Motion Sim: Matrix
 
-def std_bm_engine_matrix(n_paths, n_steps, T, X0):
+def stdBm_matrix(powerTwoPaths:int, nSteps:int, T:int, x0:float=0.0) -> dict:
     """
-    This function simulates brownian paths using matrix algebra. 
+    Simulates brownian paths using matrix algebra. 
     
     Note in fact that the AUTO-covaraince matrix of a Brownian path is the  
     AUTO-covariance matrix of the Brownian motions vector. e.g. 
     [W(t1), W(t2), W(t3)].
 
-    Given that Cov(W(t),W(s)) = E[W(t)W(s)] = min(t,s)
-    The AUTO-covariance matrix and its Cholesky look like:
+    Given that Cov(W(t), W(s)) = E[W(t)W(s)] = min(t,s)
+    The AUTO-covariance matrix and its Cholesky are:
         
      AUTO-covariance                Cholesky                     N(0,1)
       ---------------      ------------------------------------   ------   
@@ -73,93 +76,103 @@ def std_bm_engine_matrix(n_paths, n_steps, T, X0):
       | t1  t2   t3 |      |sqrt(t1) sqrt(t2-t1)  sqrt(t3-t2) |   | Z3 |
       ---------------      ------------------------------------   ------
       
-    Therefore Brownian path can be constructed multiplying Cholesky times a vector
+    Therefore a Brownian path can be constructed multiplying Cholesky times a vector
     Z of standard normal r.v.
       
     Parameters
     ----------
-    n_paths : int
-        Number of paths.
-    n_steps : int
+    powerTwoPaths : int
+        Number of paths is equal to 2^powerTwoPaths.
+    nSteps : int
         Number of steps.
     T : int
         Final simulation time.
-    X0 : float
-        Initial value.
+    x0 : float
+        Initial value. For a standard Bm it should be zero. Default is 0.0.
 
     Returns
     -------
-    output : dictionary
+    output : dict
         Contains (i)  time: vector of time points
                  (ii) W   : Brownian simulation paths
 
     """
     
     #Initalize
-    dt         = T/int(n_steps)
-    matrix     = np.full([n_steps, n_steps], np.sqrt(dt))
-    cholesky   = np.tril(matrix)
-    Z          = np.random.normal(0.0, 1.0, [n_steps, n_paths]) 
+    dt       = T/nSteps
+    matrix   = np.full([nSteps, nSteps], np.sqrt(dt))
+    cholesky = np.tril(matrix)
+    Z        = np.random.normal(0.0, 1.0, [2**powerTwoPaths, nSteps]) 
     
     #Simulation
-    X          = np.matmul(cholesky, Z)
-    X0_vec     = np.zeros([n_paths]) + X0
-    X_final    = np.vstack([X0_vec, X0 + X])      
-    time       = np.hstack((0.0,np.cumsum(np.full([1, n_steps],dt))))
+    X          = np.matmul(cholesky, np.transpose(Z))
+    X0_vec     = np.zeros([2**powerTwoPaths]) + x0
+    X_final    = np.vstack([X0_vec, x0 + X])      
+    time       = np.hstack((0.0, np.cumsum(np.full([1, nSteps],dt))))
     
     #Output
-    output     = {"time": time, "W": X_final}
+    output     = {"time":time, "W":X_final}
     
     return output
     
-#%% Brownian Motion Simulation: Bridge Construction
+#%% Brownian Motion Sim: Brownian Bridge 
 
-def std_bm_engine_bridge(n_paths,n_steps, T, X0):
+def stdBm_bridge(powerTwoPaths:int, nSteps:int, T:int, x0:float=0.0, quasiMC:bool=True)->dict:
     """
     The function simulates brownian paths via brownian bridge construction. 
     See Glasserman p.85.
     
     The idea is to have T = 2^m time-steps therefore a time-vector of length m+1
-    starting at zero.
+    starting at zero:
     
-    (i)   Divide the interval in two segments  l = 0 < i = 2^m/2 < r = 2^m.
-    (ii)  Knowing W(l=0) = X0 and W(r=T) = Z(T)*sqrt(T) sample W(i = T/2) using
-          a Brownian bridge with endpoints [W(l=0), W(r = T)].
-    (iii) repeat m times populating each time the 2^k segments k = 1,2,...,m    
+        (i)   Divide the interval in two segments  l = 0 < i = 2^m/2 < r = 2^m.
+        (ii)  Knowing W(l=0) = x0 and W(r=T) = Z(T)*sqrt(T) sample W(i = T/2) using
+              a Brownian bridge with endpoints [W(l=0), W(r = T)].
+        (iii) repeat m times populating each time the 2^k segments k = 1,2,...,m 
+    
+    The function supports the use of Sobolo low-discrepancy numbers. Notes that
+    in this setting (quasiMC = True):
+        
+        nSteps = Sobol dimension
+        nPaths = Sobol points
     
     Parameters
     ----------
-    n_paths : int
-        Number of paths.
-    n_steps : int
+    powerTwoPaths : int
+        Number of paths is 2**powerTwoPaths.
+    nSteps : int
         Number of steps.
     T : int
         Final simulation time.
-    X0 : float
-        Initial value.
-
+    x0 : float
+        Initial value. For a standard Bm it should be zero. Default is 0.0.
+    quasiMC : boolean    
+        If True, perform Quasi MC simulation via Sobol sequence as opposed to 
+        usual MC backed by pseudo random numbers. The default is True.
     Returns
     -------
-    output : dictionary
+    output : dict
         Contains (i)  time: vector of time points
                  (ii) W   : Brownian simulation paths
 
     """
     #Initialize
-    dt    = T/n_steps
-    time  = np.cumsum(np.full([n_steps],dt))         
-    time  = np.hstack((0.0,time))
-         
-    Z      = np.random.normal(0.0, 1.0, [n_steps, n_paths]) 
-    h      = n_steps
+    dt     = T/nSteps
+    time   = np.cumsum(np.full([nSteps],dt))         
+    time   = np.hstack((0.0, time))
+    if (quasiMC):
+        Z  = sts.norm.ppf(qmc.Sobol(d = nSteps, scramble=True).random_base2(m=powerTwoPaths))    
+    else:         
+        Z  = np.random.normal(0.0, 1.0, [2**powerTwoPaths, nSteps]) 
+    h      = nSteps
     j_max  = 1
+    W   = np.zeros([2**powerTwoPaths, nSteps+1])        
+    W_h     = Z[:, -1]*np.sqrt(time[-1])   
+    W[:,0]  = x0
+    W[:,-1] = W_h
+    m       = np.log(nSteps)/np.log(2)
    
-    W       = np.zeros([n_steps+1, n_paths])
-    W_h     = Z[-1, :]*np.sqrt(time[-1])   
-    W[0,:]  = X0
-    W[-1,:] = W_h
-   
-    for k in range(0, int(np.log(n_steps)/np.log(2))):   
+    for k in range(0, int(m)):   
        
         i_min = int(h/2)
         i     = int(i_min)
@@ -168,10 +181,10 @@ def std_bm_engine_bridge(n_paths,n_steps, T, X0):
        
         for j in range(1, j_max + 1):
            
-            a = ((time[r]-time[i])*W[l,:] + (time[i]-time[l])*W[r,:])/(time[r]-time[l])
-            b = np.sqrt((time[i]-time[l])*(time[r]-time[i])/(time[r]-time[l]))
+            a = ((time[r]-time[i])*W[:,l] + (time[i]-time[l])*W[:,r])/(time[r]-time[l]) #Expectation
+            b = np.sqrt((time[i]-time[l])*(time[r]-time[i])/(time[r]-time[l]))          #Std Dev.
            
-            W[i,:] = a + b*Z[i,:]
+            W[:,i] = a + b*Z[:,i]
             i = int(i + h)
             l = int(l + h)
             r = int(r + h)
@@ -179,6 +192,34 @@ def std_bm_engine_bridge(n_paths,n_steps, T, X0):
         j_max = 2*j
         h     = i_min
       
-    output = {"time": time, "W":W}
+    output = {"time":time, "W":W}
     return output   
+
+#%% Fractional Brownian Motion Sim
+
+#TODO: Implement circulant matrix approach and others.
         
+#%% Convergence Test
+
+def convergenceTestBm(quasiMC, nPathsPower, nSteps, horizon, x0, methods):
+    
+    dfExp = pd.DataFrame(columns=methods)
+    dfVar = pd.DataFrame(columns=methods)
+    
+    for i, exp in enumerate(nPathsPower):
+        sim_loop   = stdBm_loop(exp, nSteps, horizon, x0)        
+        sim_mat    = stdBm_matrix(exp, nSteps, horizon, x0)         
+        sim_bridge = stdBm_bridge(exp, nSteps, horizon, x0, quasiMC) 
+        
+        dfExp.loc[i] = [np.mean(sim_loop["W"][:,-1]), 
+                        np.mean(sim_mat["W"][-1,:]), 
+                        np.mean(sim_bridge["W"][:,-1])]      
+        dfVar.loc[i] = [(np.var(sim_loop["W"][:,-1])-horizon)/horizon, 
+                        (np.var(sim_mat["W"][-1,:])-horizon)/horizon,
+                        (np.var(sim_bridge["W"][:,-1])-horizon)/horizon]
+    
+    dfExp.index = nPathsPower
+    dfVar.index = nPathsPower
+    
+    return dfExp, dfVar
+    
