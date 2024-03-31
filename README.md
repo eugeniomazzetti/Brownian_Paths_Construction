@@ -2,5 +2,7 @@
 Different Brownian paths construction methodologies.
 
 - Incremental
-- Brownian Bridge + Sobol
 - Cholesky (without PCA)
+- PCA
+- Spectral
+- Brownian Bridge + Sobol
